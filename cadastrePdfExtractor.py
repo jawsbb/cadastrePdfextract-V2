@@ -40,7 +40,15 @@ class CadastralPdfExtractor:
         ):
             return []
         owners = self.extract_owners(first_table)
+        
+        # Extraire les propriétés des tableaux suivants (logique originale)
         properties = self.extract_properties_from_tables(tables[1:])
+        
+        # NOUVELLE LOGIQUE : Si aucune propriété trouvée dans les tableaux suivants,
+        # chercher aussi dans le premier tableau (cas des tableaux collés)
+        if not properties:
+            properties = self.extract_properties_from_single_table(first_table)
+        
         self.build_id_for_properties(properties, year_departement_commune)
 
         return self.convert_result_into_final_display(
@@ -341,6 +349,37 @@ class CadastralPdfExtractor:
         if property_info["contenance_ca"] is None:
             print("Contenance ca not found.")
         return property_info
+
+    def extract_properties_from_single_table(self, table: pd.DataFrame) -> list:
+        """
+        Extraire les propriétés d'un seul tableau (utilisé pour les cas de tableaux collés).
+        
+        Args:
+            table (pd.DataFrame): Le tableau à analyser.
+            
+        Returns:
+            list: Une liste de propriétés extraites du tableau.
+        """
+        properties: list = []
+        rows = table.values.tolist()
+        
+        for row in rows:
+            # Arrêter si on trouve "Contenance totale"
+            if row[0] == "Contenance totale":
+                break
+                
+            # Vérifier si la première colonne contient un numéro (indique une propriété)
+            if row[0] is not None:
+                try:
+                    property_an = int(row[0])
+                except ValueError:
+                    property_an = None
+                    
+                if property_an is not None:
+                    property_info = self.extract_property_info(row)
+                    properties.append(property_info)
+                    
+        return properties
 
     def extract_properties_from_tables(self, tables: list) -> list:
         """
