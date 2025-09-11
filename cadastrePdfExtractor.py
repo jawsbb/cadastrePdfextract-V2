@@ -189,6 +189,7 @@ class CadastralPdfExtractor:
             print("Owner number not found.")
         owner_name_address_string = rows[1][0] if len(rows) > 1 else None
         if owner_name_address_string:
+            # Essayer d'abord le format français standard (avec code postal numérique)
             name_address_match = re.search(
                 r"Nom\s*:\s*(.*)\s*Prénom\s*:\s*([^\n]*)\nAdresse\s*:\s*([^\n]*)\n[^\d]*\s*(\d+)\s*(.*)",
                 owner_name_address_string,
@@ -200,7 +201,19 @@ class CadastralPdfExtractor:
                 owner_info["postal_code"] = name_address_match.group(4).strip()
                 owner_info["city"] = name_address_match.group(5).strip()
             else:
-                print("Owner name and address not found in the expected format.")
+                # Essayer le format étranger (sans code postal numérique)
+                foreign_address_match = re.search(
+                    r"Nom\s*:\s*(.*)\s*Prénom\s*:\s*([^\n]*)\nAdresse\s*:\s*([^\n]*)\n\s*([A-Z\s]+)",
+                    owner_name_address_string,
+                )
+                if foreign_address_match:
+                    owner_info["name"] = foreign_address_match.group(1).strip()
+                    owner_info["surname"] = foreign_address_match.group(2).strip()
+                    owner_info["address"] = foreign_address_match.group(3).strip()
+                    owner_info["postal_code"] = ""  # Pas de code postal pour les adresses étrangères
+                    owner_info["city"] = foreign_address_match.group(4).strip()
+                else:
+                    print("Owner name and address not found in the expected format.")
         else:
             print("Owner name and address string is empty or not found.")
         return owner_info
@@ -240,6 +253,7 @@ class CadastralPdfExtractor:
             print("Owner number not found.")
         owner_name_address_string: str = rows[1][0] if len(rows) > 1 else None
         if owner_name_address_string:
+            # Essayer d'abord le format français standard (avec code postal numérique)
             name_address_match = re.search(
                 r"Dénomination\s*:\s*(.*)\nAdresse\s*:\s*([^\n]*)\n[^\d]*\s*(\d+) (.*)",
                 owner_name_address_string,
@@ -250,7 +264,18 @@ class CadastralPdfExtractor:
                 owner_info["postal_code"] = name_address_match.group(3).strip()
                 owner_info["city"] = name_address_match.group(4).strip()
             else:
-                print("Owner name and address not found in the expected format.")
+                # Essayer le format étranger (sans code postal numérique)
+                foreign_address_match = re.search(
+                    r"Dénomination\s*:\s*(.*)\nAdresse\s*:\s*([^\n]*)\n\s*([A-Z\s]+)",
+                    owner_name_address_string,
+                )
+                if foreign_address_match:
+                    owner_info["name"] = foreign_address_match.group(1).strip()
+                    owner_info["address"] = foreign_address_match.group(2).strip()
+                    owner_info["postal_code"] = ""  # Pas de code postal pour les adresses étrangères
+                    owner_info["city"] = foreign_address_match.group(3).strip()
+                else:
+                    print("Owner name and address not found in the expected format.")
         else:
             print("Owner name and address string is empty or not found.")
         return owner_info
